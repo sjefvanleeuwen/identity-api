@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -38,12 +40,16 @@ namespace RemixMe.IdentityApi.Controllers
         {
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
             var token = new JwtSecurityToken(_config["Jwt:Issuer"],
                 _config["Jwt:Issuer"],
+                new[]
+                {
+                    new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                    new Claim(JwtRegisteredClaimNames.Iat, DateTime.UtcNow.ToUniversalTime().ToString(CultureInfo.InvariantCulture), ClaimValueTypes.Integer64)
+                },
                 expires: DateTime.Now.AddMinutes(30),
                 signingCredentials: creds);
-
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
@@ -66,6 +72,7 @@ namespace RemixMe.IdentityApi.Controllers
 
         private class UserModel
         {
+            public Guid Id { get; set; }
             public string Name { get; set; }
             public string Email { get; set; }
         }
